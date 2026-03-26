@@ -6,12 +6,13 @@ import time
 st.set_page_config(page_title="🛡️ मिशन: ब्लैक कमांडो", layout="wide", initial_sidebar_state="expanded")
 
 # --- कस्टम CSS (ब्लैक कमांडो डार्क थीम) ---
+# --- कस्टम CSS (ब्लैक कमांडो डार्क थीम) ---
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: #ffffff; }
     .stMetric { background-color: #1a1c24; padding: 15px; border-radius: 10px; border: 1px solid #4B5563; }
     </style>
-    """, unsafe_allow_name_with_display=True)
+    """, unsafe_allow_html=True)  # यहाँ सुधार किया गया है
 
 st.title("🛡️ मिशन: ब्लैक कमांडो - द नर्व सेंटर (V1.0)")
 
