@@ -59,29 +59,40 @@ def render_war_chart():
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# MODULE 4: वेल्थ मशीन और फंड पोर्टल (Task 5)
+# MODULE 4: वेल्थ मशीन और फंड पोर्टल (Task 5 - Updated with SIP Button)
 # ==========================================
 def render_wealth_portal(mtm, fear_idx):
     st.sidebar.markdown("### 💰 फंड और वेल्थ पोर्टल")
     
-    # एक्स्ट्रा फंड इंजेक्शन (Direct to CAPITAL_LEDGER)
-    extra_fund = st.sidebar.number_input("एक्स्ट्रा फंड डालें (₹)", min_value=0, step=1000)
-    if st.sidebar.button("Update Capital"):
+    # --- नया सेक्शन: मंथली SIP कन्फर्मेशन ---
+    st.sidebar.subheader("📅 मंथली फिक्स्ड डिपॉजिट")
+    if st.sidebar.button("📥 Deposit Monthly SIP (₹3000)"):
+        now = datetime.now().strftime("%Y-%m-%d")
+        # लेजर में ऑटो-एंट्री कि पैसा आ गया है
+        update_sheet_automation("CAPITAL_LEDGER", [now, 3000, "Monthly SIP", "Fund Received", "3000"])
+        st.sidebar.success("✅ ₹3000 SIP दर्ज! सिस्टम खरीदारी के लिए तैयार है।")
+    
+    st.sidebar.divider()
+
+    # --- एक्स्ट्रा फंड इंजेक्शन ---
+    st.sidebar.subheader("➕ एक्स्ट्रा फंड")
+    extra_fund = st.sidebar.number_input("रकम डालें (₹)", min_value=0, step=1000)
+    if st.sidebar.button("Update Extra Capital"):
         now = datetime.now().strftime("%Y-%m-%d")
         update_sheet_automation("CAPITAL_LEDGER", [now, extra_fund, "Extra Fund", "Margin Update", "-"])
         st.sidebar.success(f"₹{extra_fund} लेजर में अपडेट!")
 
-    # SIP और प्रॉफिट शेयरिंग लॉजिक
+    # --- SIP और प्रॉफिट शेयरिंग डिस्प्ले ---
     base_sip = 3000
     profit_share = max(0, mtm * 0.5)
     total_sip = base_sip + profit_share
     
     st.sidebar.divider()
-    st.sidebar.metric("Monthly Fixed SIP", f"₹{base_sip}")
-    st.sidebar.metric("From Trading Profit (50%)", f"₹{profit_share}")
+    st.sidebar.metric("Fixed Monthly SIP", f"₹{base_sip}")
+    st.sidebar.metric("From Profit (50%)", f"₹{profit_share}")
     st.sidebar.info(f"कुल निवेश योग्य: ₹{total_sip}")
 
-    # एसेट एलोकेशन
+    # एसेट एलोकेशन सलाह
     if fear_idx < 45:
         st.sidebar.success("🤖 AI: बाज़ार सस्ता है। NIFTY BEES खरीदें!")
     else:
