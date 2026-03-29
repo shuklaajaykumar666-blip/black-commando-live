@@ -6,115 +6,120 @@ import requests
 import socket
 
 # ==========================================
-# 1. राजा साहब का वेल्थ और कंपाउंडिंग इंजन
+# 1. राजा साहब का स्मार्ट वेल्थ इंजन (RSI Upgrade)
 # ==========================================
-def wealth_compounding_v12_2(daily_profit, user_sip_monthly=3000):
+def wealth_compounding_v12_2(daily_profit, user_sip_monthly=3000, nift_rsi=50):
     """
-    नियम: 
-    1. सिस्टम की बचत: ₹150 रोज़ (₹3000/20)
-    2. आपकी जेब की बचत: ₹150 रोज़ (₹3000/20)
-    3. मुनाफे का हिस्सा: ₹150 निकालने के बाद बचे प्रॉफिट का 50%
+    अपग्रेड: RSI अगर 40 से नीचे, तो सिस्टम की बचत ₹150 से बढ़कर ₹300 (Double Dip)
     """
-    # A. सिस्टम की ₹150 वाली ऑटो-बचत
-    system_sip_daily = 150 if daily_profit > 0 else 0
+    # स्मार्ट RSI चेक (मंदी में ज़्यादा खरीदारी)
+    base_system_sip = 300 if nift_rsi <= 40 else 150
     
-    # B. आपकी जेब वाली SIP का आज का हिस्सा (User Box से)
+    # A. सिस्टम की ऑटो-बचत
+    system_sip_daily = base_system_sip if daily_profit > 0 else 0
+    
+    # B. आपकी जेब वाली SIP (₹3000/20)
     user_sip_daily = user_sip_monthly / 20
     
-    # C. प्रॉफिट का 50% वेल्थ के लिए (₹150 सिस्टम वाले काटकर)
+    # C. बचे मुनाफे का 50%
     remaining_profit = daily_profit - system_sip_daily
     profit_50_percent = (remaining_profit * 0.50) if remaining_profit > 0 else 0
     
-    # कुल निवेश (Total Compounding Today)
     total_wealth_today = system_sip_daily + user_sip_daily + profit_50_percent
-    
-    return total_wealth_today
+    return total_wealth_today, base_system_sip
 
 # ==========================================
-# 2. कोर एजेंट्स और सुरक्षा (V12.2 Upgrade)
+# 2. जंपिंग स्टॉप-लॉस गार्ड (Dynamic Trailing Upgrade)
 # ==========================================
-def agent_brain_v12(vix, pcr, nasdaq):
-    curr_time = datetime.now().time()
-    # 10:45 न्यूज़/VIX शील्ड
-    if (vix > 20) and curr_time < dt_time(10, 45):
-        return "NO_TRADE_ZONE", "🚨 VIX हाई! 10:45 तक बाज़ार को सिर्फ पढ़ें।"
-    
-    if vix < 15 and pcr > 0.85:
-        return "SAFE_SELLING", "प्रीमियम गलाने (Theta Decay) का दिन।"
-    elif vix > 20 or nasdaq < -1.1:
-        return "HEDGED_STRATEGY", "बाज़ार में डर है, सुरक्षा (Hedges) अनिवार्य।"
-    else:
-        return "MOMENTUM_BUYING", "चाल तेज़ है, स्निपर बायर मोड ऑन।"
-
 def agent_bodyguard_v12(mtm, capital):
-    """1% स्टॉप लॉस और ₹1500/₹3000 प्रॉफिट प्रोटेक्टर"""
+    """
+    नया लॉजिक: ₹3000 के बाद हर ₹500 के प्रॉफिट पर SL ₹300 ऊपर खिसकेगा।
+    """
     if 'max_pnl' not in st.session_state: st.session_state.max_pnl = 0
     st.session_state.max_pnl = max(st.session_state.max_pnl, mtm)
     
+    # हार्ड स्टॉप लॉस (1%)
     if mtm <= -(0.01 * capital):
-        return True, "🚨 KILL SWITCH: 1% कैपिटल स्टॉप लॉस ट्रिगर!"
-    if st.session_state.max_pnl >= 3000 and mtm <= 1500:
-        return True, "💰 WEALTH LOCK: ₹1500 मुनाफा लॉक कर दिया गया।"
+        return True, "🚨 KILL SWITCH: 1% कैपिटल स्टॉप लॉस!"
+
+    # --- जंपिंग स्टॉप-लॉस (Dynamic Trailing) ---
+    if st.session_state.max_pnl >= 3000:
+        # ₹3000 पर बेस लॉक ₹1500 है।
+        # उसके ऊपर हर ₹500 पर ₹300 का जंप।
+        extra_profit = st.session_state.max_pnl - 3000
+        jumps = int(extra_profit // 500)
+        dynamic_sl = 1500 + (jumps * 300)
+        
+        if mtm <= dynamic_sl:
+            return True, f"💰 JUMPING SL HIT: ₹{dynamic_sl} मुनाफा सुरक्षित!"
+            
+    # बेसिक लॉक (अगर प्रॉफिट ₹3000 के नीचे है)
+    elif st.session_state.max_pnl >= 1500 and mtm <= 0:
+        return True, "🛡️ SAFETY: ₹1500 देख चुके हैं, अब लॉस नहीं लेंगे।"
+
     return False, ""
 
 # ==========================================
-# 3. मास्टर कंट्रोल और 'जादुई बॉक्स' (SIDEBAR)
+# 3. कोर एजेंट्स (VIX & Strategy)
+# ==========================================
+def agent_brain_v12(vix, pcr, nasdaq):
+    curr_time = datetime.now().time()
+    if (vix > 20) and curr_time < dt_time(10, 45):
+        return "NO_TRADE_ZONE", "🚨 VIX हाई! 10:45 तक बाज़ार को सिर्फ पढ़ें।"
+    
+    if vix < 15 and pcr > 0.85: return "SAFE_SELLING", "प्रीमियम गलाने का दिन।"
+    elif vix > 20 or nasdaq < -1.1: return "HEDGED_STRATEGY", "सुरक्षा अनिवार्य।"
+    else: return "MOMENTUM_BUYING", "स्निपर बायर मोड ऑन।"
+
+# ==========================================
+# 4. मास्टर UI (Deployment Ready)
 # ==========================================
 st.set_page_config(page_title="🛡️ ब्लैक कमांडो V12.2", layout="wide")
 
 def main():
-    # इंटरनेट चेक (हार्टबीट)
     try: socket.create_connection(("8.8.8.8", 53), timeout=1)
-    except: st.error("🚨 INTERNET DROP: कमांडो स्टैंडबाय पर है।"); return
+    except: st.error("🚨 INTERNET DROP"); return
 
-    st.title("🛡️ मिशन: ब्लैक कमांडो V12.2")
-    st.caption("आज्ञा से: राजा साहब | स्टेटस: अजेय तैनात")
-
-    # --- 🏦 जादुई वेल्थ पैनल (SIDEBAR) ---
-    st.sidebar.header("💰 राजा साहब वेल्थ कंट्रोल")
+    st.title("🛡️ मिशन: ब्लैक कमांडो V12.2 (Ultra)")
     
-    with st.sidebar.expander("💸 फंड और SIP एंट्री", expanded=True):
-        base_cap = st.number_input("पुरानी पूँजी (Trading Capital)", value=100000)
+    # --- जादुई बॉक्स (Sidebar) ---
+    st.sidebar.header("💰 वेल्थ कंट्रोल")
+    with st.sidebar.expander("💸 फंड और RSI सेटिंग", expanded=True):
+        base_cap = st.number_input("पुरानी पूँजी", value=100000)
+        user_sip_input = st.number_input("जेब से मासिक SIP (₹)", value=3000)
+        extra_fund = st.number_input("एक्स्ट्रा फंड (₹)", value=0)
+        live_rsi = st.sidebar.slider("Nifty RSI (Live)", 10, 90, 45) # ऑटो फीड होगा
         
-        # जादुई बॉक्स 1: जेब से डाले गए ₹3,000 की जानकारी
-        user_sip_input = st.number_input("जेब से जमा मासिक SIP (₹)", value=3000)
-        
-        # जादुई बॉक्स 2: एक्स्ट्रा फंड (Wealth Booster)
-        extra_fund = st.number_input("एक्स्ट्रा फंड जो डिमैट में डाला (₹)", value=0)
-        
-        # टोटल ट्रेडिंग पावर
-        total_trading_power = base_cap + extra_fund + (user_sip_input / 20)
-        st.sidebar.metric("आज की कुल ताकत", f"₹{int(total_trading_power)}")
+        total_power = base_cap + extra_fund + (user_sip_input / 20)
+        st.sidebar.metric("आज की कुल ताकत", f"₹{int(total_power)}")
 
-    # डेटा सिमुलेशन (Dhan API लाइव होने पर यहाँ डेटा आएगा)
-    live_mtm = 3500 # डेमो मुनाफा
+    # डेटा सिमुलेशन
+    live_mtm = 5200  # मान लीजिए आज ₹5200 का प्रॉफिट है
     vix, pcr, nasdaq = 14.8, 1.1, -0.4
 
-    # --- इंजन कैलकुलेशन ---
-    today_wealth = wealth_compounding_v12_2(live_mtm, user_sip_input)
+    # --- इंजन रनिंग ---
+    today_wealth, current_sip_rate = wealth_compounding_v12_2(live_mtm, user_sip_input, live_rsi)
     strat_key, strat_desc = agent_brain_v12(vix, pcr, nasdaq)
-    is_kill, kill_msg = agent_bodyguard_v12(live_mtm, total_trading_power)
+    is_kill, kill_msg = agent_bodyguard_v12(live_mtm, total_trading_power=total_power)
 
-    # डैशबोर्ड रिपोर्ट
+    # डैशबोर्ड
     st.subheader("🤖 ऑटोनॉमस वेल्थ रिपोर्ट")
     r1, r2, r3, r4 = st.columns(4)
     r1.metric("Strategy", strat_key, strat_desc)
-    r2.metric("Net Power", f"₹{int(total_trading_power)}")
+    r2.metric("Buying Power", f"₹{int(total_power)}")
     r3.metric("Live MTM", f"₹{live_mtm}")
-    r4.metric("आज का कुल निवेश", f"₹{int(today_wealth)}")
+    r4.metric("Wealth Compound", f"₹{int(today_wealth)}")
 
-    # वेल्थ मैसेज
-    st.success(f"🚀 **वेल्थ अपडेट:** आज ₹{int(today_wealth)} को Nifty/Gold BEES में 'कंपाउंड' करने के लिए निकाला गया।")
-    st.info(f"💡 इसमें शामिल: ₹150 (System) + ₹{user_sip_input/20} (Jeb Se) + 50% Profit")
+    # स्मार्ट अलर्ट्स
+    if live_rsi <= 40:
+        st.warning(f"📉 RSI {live_rsi} है! 'Buy-the-Dip' एक्टिव: आज बचत ₹150 के बजाय ₹300 हो रही है।")
+    
+    st.success(f"🚀 **Action:** ₹{int(today_wealth)} कंपाउंडिंग के लिए लॉक। (System: ₹{current_sip_rate})")
 
     if is_kill:
         st.session_state.kill_active = True
         st.error(f"🛡️ {kill_msg}")
-        # यहाँ टेलीग्राम अलर्ट भी जा सकता है
         st.stop()
-
-    st.divider()
-    st.caption("📉 सिस्टम अब आपकी पिछली जीत-हार (17-कॉलम डेटा) से खुद को रोज़ाना बेहतर बना रहा है।")
 
 if __name__ == "__main__":
     main()
